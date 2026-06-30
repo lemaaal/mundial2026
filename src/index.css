@@ -1,0 +1,130 @@
+@import 'tailwindcss';
+@import 'flag-icons/css/flag-icons.min.css';
+
+@theme {
+  --color-bg: #f8f7f4;
+  --color-bg-soft: #f1eee8;
+  --color-bg-card: #ffffff;
+  --color-border: #d4d0c5;
+  --color-border-soft: #e5e7eb;
+
+  --color-text: #1a1a2e;
+  --color-text-muted: #6b7280;
+
+  --color-primary: #1b3a6f;
+  --color-primary-soft: #2c5093;
+  --color-primary-tint: #e8eef7;
+
+  --color-secondary: #c8102e;
+  --color-secondary-soft: #e7223f;
+  --color-secondary-tint: #fde6e9;
+
+  --color-accent: #006847;
+  --color-accent-soft: #1a7f5e;
+  --color-accent-tint: #e0f0e9;
+
+  --color-gold: #d4a017;
+  --color-gold-soft: #eab83b;
+  --color-gold-tint: #fbf2d6;
+
+  --color-silver: #9ba3ad;
+  --color-bronze: #b87333;
+
+  --color-success: #006847;
+  --color-danger: #c8102e;
+
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-heading:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(
+      ellipse at top right,
+      rgba(27, 58, 111, 0.06),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at bottom left,
+      rgba(0, 104, 71, 0.05),
+      transparent 60%
+    ),
+    var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: white;
+}
+
+/* Bracket connector primitives */
+.bracket-connector-right::after {
+  content: '';
+  position: absolute;
+  right: -1.5rem;
+  top: 50%;
+  width: 1.5rem;
+  height: 2px;
+  background: var(--color-border-soft);
+}
+.bracket-pair {
+  position: relative;
+}
+.bracket-pair::before {
+  content: '';
+  position: absolute;
+  right: -1.5rem;
+  top: 25%;
+  bottom: 25%;
+  width: 2px;
+  background: var(--color-border-soft);
+}
+.bracket-pair::after {
+  content: '';
+  position: absolute;
+  right: -3rem;
+  top: 50%;
+  width: 1.5rem;
+  height: 2px;
+  background: var(--color-border-soft);
+}
+.bracket-single::after {
+  content: '';
+  position: absolute;
+  right: -1.5rem;
+  top: 50%;
+  width: 1.5rem;
+  height: 2px;
+  background: var(--color-border-soft);
+}
+
+.fi {
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}

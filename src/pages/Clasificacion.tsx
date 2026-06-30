@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTournament } from '../hooks/useTournament';
 import { PLAYERS } from '../constants/players';
 import { rankByConfirmed, scoreAllPlayers } from '../utils/scoring';
@@ -9,17 +10,24 @@ import {
   PodiumSkeleton,
 } from '../components/LoadingSkeleton';
 import { ErrorMessage } from '../components/ErrorMessage';
-import { PredictionModal } from '../components/PredictionModal';
 import { RefreshButton } from '../components/RefreshButton';
+
+function slug(name: string): string {
+  return name.toLowerCase();
+}
 
 export function ClasificacionPage() {
   const { data, isLoading, error, refetch, isFetching } = useTournament();
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const ranked = useMemo(() => {
     if (!data) return [];
     return rankByConfirmed(scoreAllPlayers(PLAYERS, data));
   }, [data]);
+
+  const openCuadro = (playerName: string) => {
+    navigate(`/cuadros/${slug(playerName)}`);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -52,26 +60,21 @@ export function ClasificacionPage() {
 
       {data && (
         <>
-          <PodiumDisplay scores={ranked} onSelect={setSelectedPlayer} />
+          <PodiumDisplay scores={ranked} onSelect={openCuadro} />
           <div className="flex flex-col gap-2">
             {ranked.map((score) => (
               <PlayerCard
                 key={score.player.name}
                 score={score}
-                onClick={() => setSelectedPlayer(score.player.name)}
+                onClick={() => openCuadro(score.player.name)}
               />
             ))}
           </div>
           <p className="text-center text-xs text-text-muted mt-2">
-            Toca un participante para ver su bracket original.
+            Toca un participante para ver su cuadro original.
           </p>
         </>
       )}
-
-      <PredictionModal
-        playerName={selectedPlayer}
-        onClose={() => setSelectedPlayer(null)}
-      />
     </div>
   );
 }

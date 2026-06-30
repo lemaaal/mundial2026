@@ -1,6 +1,6 @@
 import type {
   ParsedMatch,
-  RawMatch,
+  RawScore,
   RawWorldCup,
   RoundKey,
   TeamCode,
@@ -37,13 +37,60 @@ function makeSide(rawName: string): MatchSide {
   return { code: codeFromName(rawName), rawName, resolved: true };
 }
 
-function determineWinner(
-  team1: MatchSide,
-  team2: MatchSide,
-  match: RawMatch,
+const PLACEHOLDER_RE = /^([WL])(\d+)$/;
+
+function resolvePlaceholders(
+  matchesByRound: Record<RoundKey, ParsedMatch[]>,
+  byNum: Map<number, ParsedMatch>,
+): void {
+  let changed = true;
+  let safety = 8;
+  while (changed && safety-- > 0) {
+    changed = false;
+    for (const round of KNOCKOUT_ROUNDS) {
+      for (const match of matchesByRound[round]) {
+        let sideChanged = false;
+        for (const sideKey of ['team1', 'team2'] as const) {
+          const side = match[sideKey];
+          if (side.resolved) continue;
+          const m = PLACEHOLDER_RE.exec(side.rawName);
+          if (!m) continue;
+          const refNum = Number.parseInt(m[2]!, 10);
+          const refMatch = byNum.get(refNum);
+          if (!refMatch || !refMatch.played) continue;
+          const target = m[1] === 'W' ? refMatch.winner : refMatch.loser;
+          if (!target) continue;
+          match[sideKey] = {
+            code: target,
+            rawName: target,
+            resolved: true,
+          };
+          changed = true;
+          sideChanged = true;
+        }
+        if (sideChanged) {
+          // Recompute outcome now that the sides have real team codes;
+          // a score that was sitting on a placeholder match becomes valid.
+          const outcome = decideOutcome(
+            match.team1.code,
+            match.team2.code,
+            match.score,
+          );
+          match.played = outcome.played;
+          match.winner = outcome.winner;
+          match.loser = outcome.loser;
+        }
+      }
+    }
+  }
+}
+
+export function decideOutcome(
+  team1Code: TeamCode | null,
+  team2Code: TeamCode | null,
+  score: RawScore | undefined,
 ): { winner: TeamCode | null; loser: TeamCode | null; played: boolean } {
-  const { score } = match;
-  if (!score || !score.ft || !team1.code || !team2.code) {
+  if (!score || !score.ft || !team1Code || !team2Code) {
     return { winner: null, loser: null, played: false };
   }
 
@@ -63,8 +110,8 @@ function determineWinner(
   if (winnerSide === null) {
     return { winner: null, loser: null, played: true };
   }
-  const winner = winnerSide === 1 ? team1.code : team2.code;
-  const loser = winnerSide === 1 ? team2.code : team1.code;
+  const winner = winnerSide === 1 ? team1Code : team2Code;
+  const loser = winnerSide === 1 ? team2Code : team1Code;
   return { winner, loser, played: true };
 }
 
@@ -84,7 +131,11 @@ export function parseTournament(raw: RawWorldCup): TournamentState {
 
     const team1 = makeSide(m.team1);
     const team2 = makeSide(m.team2);
-    const { winner, loser, played } = determineWinner(team1, team2, m);
+    const { winner, loser, played } = decideOutcome(
+      team1.code,
+      team2.code,
+      m.score,
+    );
 
     matchesByRound[roundKey].push({
       round: roundKey,
@@ -103,6 +154,18 @@ export function parseTournament(raw: RawWorldCup): TournamentState {
   for (const round of KNOCKOUT_ROUNDS) {
     matchesByRound[round].sort((a, b) => a.num - b.num);
   }
+
+  // openfootball can lag writing "Winner of #74" back as "Paraguay" in the
+  // R16 placeholder. Resolve W{n}/L{n} ourselves so the bracket UI and any
+  // downstream logic see the real team code as soon as the prior match
+  // has a determined winner. Iterates because chains like #97=W89=W74 exist.
+  const byNum = new Map<number, ParsedMatch>();
+  for (const round of KNOCKOUT_ROUNDS) {
+    for (const match of matchesByRound[round]) {
+      byNum.set(match.num, match);
+    }
+  }
+  resolvePlaceholders(matchesByRound, byNum);
 
   const reached: Record<RoundKey, Set<TeamCode>> = {
     r32: new Set(),

@@ -202,3 +202,66 @@ Además del avatar con iniciales que ya existe, quiero poder añadir una foto de
 - Aplica esto tanto en la clasificación como en el podio y en cualquier sitio donde aparezca el participante
 
 Antes de implementar, dime si tienes dudas sobre alguno de estos 4 puntos.
+
+
+# Bug: los partidos empatados a penaltis no avanzan al ganador
+
+Hay un fallo crítico en `getWinner()` (o la función equivalente que determina el ganador de un partido) dentro de `src/services/worldcupApi.ts` (o donde esté esa lógica).
+
+## El problema
+
+En el bracket se ve claramente: partidos como GER 1–1 PAR (pen. 3–4) o NED 1–1 MAR (pen. 2–3) muestran el resultado de la tanda de penaltis correctamente en la cabecera de la tarjeta, pero el sistema **no está usando ese dato para determinar el ganador**. Como el marcador en tiempo reglamentario está empatado (1–1), la función debe estar devolviendo `null` o no resolviendo el ganador, y por eso:
+
+1. Esos equipos no avanzan a la siguiente ronda en el bracket (octavos se queda con placeholders tipo "W74", "W77" sin resolver aunque el partido #74 y #77 ya tienen resultado)
+2. El cálculo de puntos está mal porque depende de saber qué equipo avanzó realmente en cada ronda — si el ganador no se resuelve, ningún participante puede recibir los puntos acumulativos de las rondas siguientes para ese equipo
+
+## Qué corregir
+
+Revisa la función que determina el ganador de un partido. Tiene que seguir esta prioridad:
+
+1. Si el marcador en tiempo reglamentario (o con prórroga, si el JSON de openfootball distingue `score.et` de `score.ft`) tiene un ganador claro (no empate), ese es el ganador.
+2. Si el marcador final está empatado, busca el campo de penaltis en los datos del partido (revisa cómo openfootball estructura esto exactamente — puede ser `score.pso`, `penalties`, o un campo similar dentro del objeto del partido; inspecciona el JSON real para confirmar la clave exacta) y usa ese resultado para determinar el ganador.
+3. Si no hay marcador final ni penaltis disponibles todavía (partido no jugado o en curso), el partido debe considerarse "sin resolver" — null — y eso sí está bien que no avance a la ronda siguiente.
+
+Después de corregir esto:
+
+- Verifica que el bracket muestre el equipo ganador real en los partidos de octavos que dependen de un resultado de penaltis (ej. el partido #89 debería mostrar "PAR" en vez de "W74" si Paraguay ganó los penaltis, o "GER" si fue Alemania la que avanzó — confírmalo con los datos reales)
+- Verifica que el cálculo de puntos en `src/utils/scoring.ts` ahora compute correctamente los puntos para los equipos que avanzaron por penaltis
+- Añade un test en Vitest específico para este caso: un partido con marcador empatado en regulación pero con ganador claro por penaltis, verificando que `getWinner()` devuelve el equipo correcto y no `null`
+
+Antes de aplicar el fix, dime si necesitas que te pegue un fragmento del JSON real de openfootball para confirmar la estructura exacta del campo de penaltis, o si puedes inspeccionarlo tú directamente desde la URL del dataset.
+
+# Regenerar players.ts a partir de las imágenes originales
+
+El fichero `src/constants/players.ts` tiene datos mal transcritos en el campo `picks` de varios participantes. Necesito que lo regeneres leyendo directamente las imágenes originales de cada bracket, que están en `public/img/predicciones/`:
+
+- `Astu2026.jpeg`
+- `Lema2026.png`
+- `Mich2026.png`
+- `Noya2026.png`
+- `Pastrana2026.jpeg`
+- `Pedro2026.png`
+- `Redon2026.png`
+- `Xinho2026.png`
+
+## Qué hacer
+
+1. Abre y analiza cada una de las 8 imágenes una por una. Son brackets del Mundial 2026 con la estructura completa: 16avos de final (16 partidos), octavos (visibles como los cruces ganadores), cuartos, semifinales, 3er puesto, final y campeón.
+
+2. Para cada imagen, extrae con precisión:
+   - **r16**: los 8 equipos ganadores que ese participante predijo que pasarían de 16avos a octavos (los que aparecen ya emparejados en la columna de octavos)
+   - **qf**: los 4 equipos que predijo llegarían a cuartos de final
+   - **sf**: los 2 equipos que predijo llegarían a semifinales
+   - **third**: el equipo que predijo para el 3er puesto
+   - **final**: el equipo finalista (además del campeón)
+   - **champion**: el equipo campeón
+
+3. Usa los códigos de 3 letras en mayúsculas (ej. ESP, FRA, ARG, BRA, GER, NED, POR, USA, CAN, MEX, ENG, COL, BEL, SEN, MAR, CRO, JPN, NOR, SUI, DZA, etc.) consistentes con el resto del proyecto.
+
+4. Regenera el array `PLAYERS` completo en `src/constants/players.ts` con los datos corregidos, manteniendo intactos los campos `name`, `abbr` y `color` que ya están bien, y el objeto `PREDICTION_IMAGES` al final tal cual está.
+
+## Importante
+
+- No asumas ni reutilices los datos que ya había en el fichero actual — analiza cada imagen desde cero como fuente de verdad, porque varios de los valores actuales están equivocados.
+- Si en alguna imagen hay ambigüedad o no se aprecia bien algún equipo (resolución, texto cortado, etc.), dímelo explícitamente en vez de adivinar.
+- Cuando termines, muéstrame un resumen en una tabla (participante → r16 → qf → sf → third → final → champion) para que pueda verificarlo rápido antes de dar el cambio por bueno.

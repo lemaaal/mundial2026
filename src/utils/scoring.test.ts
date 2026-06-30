@@ -45,6 +45,10 @@ function emptyState(): TournamentState {
       'MAR',
       'SEN',
       'CRO',
+      'NOR',
+      'MEX',
+      'EGY',
+      'SUI',
       'PAR',
     ]),
     lastUpdate: new Date().toISOString(),
@@ -56,20 +60,25 @@ const ASTU: Player = {
   abbr: 'AS',
   color: '#2a78d6',
   picks: {
-    r16: ['GER', 'FRA', 'CAN', 'NED', 'POR', 'ESP', 'USA', 'BEL'],
-    qf: ['GER', 'FRA', 'POR', 'ESP'],
-    sf: ['FRA', 'ESP'],
-    third: 'ARG',
-    final: 'FRA',
+    r32: [
+      'GER', 'FRA', 'CAN', 'NED', 'POR', 'ESP', 'USA', 'BEL',
+      'BRA', 'NOR', 'MEX', 'ENG', 'ARG', 'EGY', 'SUI', 'COL',
+    ],
+    r16: ['FRA', 'NED', 'ESP', 'USA', 'NOR', 'ENG', 'ARG', 'COL'],
+    qf: ['FRA', 'ESP', 'ENG', 'ARG'],
+    sf: ['FRA', 'ENG'],
+    third: 'ESP',
+    final: 'ENG',
     champion: 'FRA',
   },
 };
 
-describe('point values use base+1 + acumulativo', () => {
-  it('exposes the published values (2/3/4/5/6 + 5 third)', () => {
-    expect(POINTS.r16).toBe(2);
-    expect(POINTS.qf).toBe(3);
-    expect(POINTS.sf).toBe(4);
+describe('point values use base+1 + acumulativo per round', () => {
+  it('exposes the published values (2/3/4/5 + final 5 + champion 6 + third 5)', () => {
+    expect(POINTS.r32).toBe(2);
+    expect(POINTS.r16).toBe(3);
+    expect(POINTS.qf).toBe(4);
+    expect(POINTS.sf).toBe(5);
     expect(POINTS.final).toBe(5);
     expect(POINTS.champion).toBe(6);
     expect(POINTS.third).toBe(5);
@@ -84,7 +93,7 @@ describe('scorePlayer', () => {
     expect(result.potentialPoints).toBeGreaterThan(0);
   });
 
-  it('awards 2+3+4+5+6 = 20 for a team that wins it all', () => {
+  it('awards 2+3+4+5+6 = 20 to a champion that wins every round', () => {
     const state = emptyState();
     state.reached.r16 = new Set(['FRA', 'GER', 'POR', 'ESP']);
     state.reached.qf = new Set(['FRA', 'POR', 'ESP']);
@@ -101,7 +110,24 @@ describe('scorePlayer', () => {
     expect(fraPoints).toBe(20);
   });
 
-  it('grants only +2 (base+1 for R16) for a team that lost in R16', () => {
+  it('awards 2+3+4+5+5 = 19 to a runner-up matching the `final` pick', () => {
+    const state = emptyState();
+    state.reached.r16 = new Set(['FRA', 'ENG']);
+    state.reached.qf = new Set(['FRA', 'ENG']);
+    state.reached.sf = new Set(['FRA', 'ENG']);
+    state.reached.final = new Set(['FRA', 'ENG']);
+    state.champion = 'FRA';
+    state.eliminated = new Set(['ENG']);
+    state.alive = new Set();
+
+    const result = scorePlayer(ASTU, state);
+    const engPoints = result.awards
+      .filter((a) => a.team === 'ENG' && a.status === 'confirmed')
+      .reduce((sum, a) => sum + a.points, 0);
+    expect(engPoints).toBe(19);
+  });
+
+  it('grants only +2 for a team that lost in R16 (1 base + 1 acum)', () => {
     const state = emptyState();
     state.reached.r16 = new Set(['GER']);
     state.eliminated = new Set(['GER']);
@@ -117,7 +143,7 @@ describe('scorePlayer', () => {
 
   it('grants +5 for an exact third-place hit', () => {
     const state = emptyState();
-    state.thirdPlaceWinner = 'ARG';
+    state.thirdPlaceWinner = 'ESP';
     const result = scorePlayer(ASTU, state);
     const third = result.awards.find((a) => a.key === 'third');
     expect(third?.status).toBe('confirmed');
@@ -126,7 +152,7 @@ describe('scorePlayer', () => {
 
   it('marks third-place pick as lost when team reached the final', () => {
     const state = emptyState();
-    state.reached.final = new Set(['ARG', 'FRA']);
+    state.reached.final = new Set(['ESP', 'FRA']);
     const result = scorePlayer(ASTU, state);
     const third = result.awards.find((a) => a.key === 'third');
     expect(third?.status).toBe('lost');
@@ -166,7 +192,6 @@ describe('parseTournament — reached propagation', () => {
 
   it('counts R32 winners as having reached R16 even if R16 placeholders are not yet propagated', () => {
     const raw = rawWith([
-      // South Africa eliminated, Canada through
       {
         round: 'Round of 32',
         num: 73,
@@ -174,7 +199,6 @@ describe('parseTournament — reached propagation', () => {
         team2: 'Canada',
         score: { ft: [0, 1] },
       },
-      // Morocco won on penalties vs Netherlands
       {
         round: 'Round of 32',
         num: 75,
@@ -182,7 +206,6 @@ describe('parseTournament — reached propagation', () => {
         team2: 'Morocco',
         score: { ft: [1, 1], p: [2, 3] },
       },
-      // R16 match still has placeholder for Morocco's side
       {
         round: 'Round of 16',
         num: 90,
@@ -195,6 +218,85 @@ describe('parseTournament — reached propagation', () => {
     expect(state.reached.r16.has('MAR')).toBe(true);
     expect(state.eliminated.has('NED')).toBe(true);
     expect(state.alive.has('MAR')).toBe(true);
+  });
+
+  it('resolves a penalty shootout (1-1 ft, 3-4 pen) to the shootout winner', () => {
+    const raw = rawWith([
+      {
+        round: 'Round of 32',
+        num: 74,
+        team1: 'Germany',
+        team2: 'Paraguay',
+        score: { ft: [1, 1], p: [3, 4] },
+      },
+    ]);
+    const state = parseTournament(raw);
+    const match = state.matchesByRound.r32[0]!;
+    expect(match.played).toBe(true);
+    expect(match.winner).toBe('PAR');
+    expect(match.loser).toBe('GER');
+    expect(state.reached.r16.has('PAR')).toBe(true);
+    expect(state.eliminated.has('GER')).toBe(true);
+  });
+
+  it('substitutes W{n}/L{n} placeholders in later rounds with the resolved team', () => {
+    const raw = rawWith([
+      {
+        round: 'Round of 32',
+        num: 74,
+        team1: 'Germany',
+        team2: 'Paraguay',
+        score: { ft: [1, 1], p: [3, 4] },
+      },
+      {
+        round: 'Round of 16',
+        num: 89,
+        team1: 'W74',
+        team2: 'W77',
+      },
+    ]);
+    const state = parseTournament(raw);
+    const r16Match = state.matchesByRound.r16.find((m) => m.num === 89)!;
+    expect(r16Match.team1.code).toBe('PAR');
+    expect(r16Match.team1.resolved).toBe(true);
+    expect(r16Match.team2.code).toBe(null);
+    expect(r16Match.team2.rawName).toBe('W77');
+  });
+
+  it('propagates resolution through chains of placeholders (#97 = W89 = W74)', () => {
+    const raw = rawWith([
+      {
+        round: 'Round of 32',
+        num: 74,
+        team1: 'Germany',
+        team2: 'Paraguay',
+        score: { ft: [1, 1], p: [3, 4] },
+      },
+      {
+        round: 'Round of 32',
+        num: 77,
+        team1: 'France',
+        team2: 'Sweden',
+        score: { ft: [2, 0] },
+      },
+      {
+        round: 'Round of 16',
+        num: 89,
+        team1: 'W74',
+        team2: 'W77',
+        score: { ft: [0, 2] },
+      },
+      {
+        round: 'Quarter-final',
+        num: 97,
+        team1: 'W89',
+        team2: 'W90',
+      },
+    ]);
+    const state = parseTournament(raw);
+    const qf = state.matchesByRound.qf.find((m) => m.num === 97)!;
+    expect(qf.team1.code).toBe('FRA');
+    expect(qf.team1.resolved).toBe(true);
   });
 
   it('propagates winners through every knockout round', () => {
@@ -238,12 +340,12 @@ describe('rankByConfirmed', () => {
     const b: Player = {
       ...ASTU,
       name: 'B',
-      picks: { ...ASTU.picks, r16: [] },
+      picks: { ...ASTU.picks, r32: [], r16: [] },
     };
     const c: Player = {
       ...ASTU,
       name: 'C',
-      picks: { ...ASTU.picks, r16: [] },
+      picks: { ...ASTU.picks, r32: [], r16: [] },
     };
     const state = emptyState();
     state.reached.r16 = new Set(['GER']);

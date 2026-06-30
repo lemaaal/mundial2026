@@ -23,8 +23,8 @@ function MatchCard({ match }: { match: ParsedMatch }) {
     match.loser !== null && match[side].code === match.loser;
 
   const variantFor = (side: 'team1' | 'team2') => {
-    if (!match.team1.code && !match.team2.code) return 'pending' as const;
-    if (!match.played) return 'pending' as const;
+    if (!match[side].code) return 'pending' as const;
+    if (!match.played) return 'default' as const;
     if (winnerSide(side)) return 'winner' as const;
     if (loserSide(side)) return 'loser' as const;
     return 'default' as const;

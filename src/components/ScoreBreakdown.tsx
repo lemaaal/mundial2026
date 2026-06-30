@@ -6,6 +6,7 @@ interface ScoreBreakdownProps {
 }
 
 const SECTION_ORDER: MilestoneAward['key'][] = [
+  'r32',
   'r16',
   'qf',
   'sf',
@@ -15,9 +16,10 @@ const SECTION_ORDER: MilestoneAward['key'][] = [
 ];
 
 const SECTION_LABEL: Record<MilestoneAward['key'], string> = {
-  r16: 'Octavos (+2 c/u)',
-  qf: 'Cuartos (+3 c/u)',
-  sf: 'Semis (+4 c/u)',
+  r32: '16avos (+2 c/u)',
+  r16: 'Octavos (+3 c/u)',
+  qf: 'Cuartos (+4 c/u)',
+  sf: 'Semis (+5 c/u)',
   final: 'Final (+5)',
   champion: 'Campeón (+6)',
   third: '3er puesto (+5)',

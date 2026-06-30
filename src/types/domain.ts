@@ -1,11 +1,19 @@
 export type TeamCode = string;
 
 export interface PlayerPicks {
+  /** 16 equipos: ganadores de 16avos = los que pasan a octavos. */
+  r32: TeamCode[];
+  /** 8 equipos: ganadores de octavos = los que pasan a cuartos. */
   r16: TeamCode[];
+  /** 4 equipos: ganadores de cuartos = los que pasan a semis. */
   qf: TeamCode[];
+  /** 2 equipos: ganadores de semis = los 2 finalistas. */
   sf: TeamCode[];
+  /** Equipo que gana el partido por el 3er puesto. */
   third: TeamCode;
+  /** El otro finalista (el que pierde la final). */
   final: TeamCode;
+  /** El campeón del Mundial. */
   champion: TeamCode;
 }
 
@@ -90,7 +98,7 @@ export interface TournamentState {
 }
 
 export interface MilestoneAward {
-  key: 'r16' | 'qf' | 'sf' | 'final' | 'champion' | 'third';
+  key: 'r32' | 'r16' | 'qf' | 'sf' | 'final' | 'champion' | 'third';
   label: string;
   points: number;
   team: TeamCode;

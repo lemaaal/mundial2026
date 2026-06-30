@@ -4,6 +4,7 @@ const TABS = [
   { to: '/', label: 'Clasificación' },
   { to: '/bracket', label: 'Bracket' },
   { to: '/prediccion', label: 'Predicción' },
+  { to: '/cuadros', label: 'Cuadros' },
 ];
 
 export function TabsNav() {

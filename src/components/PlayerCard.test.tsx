@@ -10,6 +10,7 @@ function makeScore(overrides: Partial<RankedScore> = {}): RankedScore {
       abbr: 'AS',
       color: '#2a78d6',
       picks: {
+        r32: [],
         r16: [],
         qf: [],
         sf: [],

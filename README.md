@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# mundial2026
-Web de quiniela del cuadro final del mundial2026 con amigos
-=======
 # Quiniela Mundial 2026
 
 Webapp para llevar la quiniela del Mundial 2026 entre 8 amigos: clasificación con

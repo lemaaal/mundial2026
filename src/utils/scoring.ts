@@ -8,15 +8,17 @@ import type {
 } from '../types/domain';
 
 export const POINTS = {
-  r16: 2,
-  qf: 3,
-  sf: 4,
+  r32: 2,
+  r16: 3,
+  qf: 4,
+  sf: 5,
   final: 5,
   champion: 6,
   third: 5,
 } as const;
 
 const LABEL = {
+  r32: '16avos',
   r16: 'Octavos',
   qf: 'Cuartos',
   sf: 'Semis',
@@ -26,7 +28,7 @@ const LABEL = {
 } as const;
 
 function evalReachMilestone(
-  key: 'r16' | 'qf' | 'sf' | 'final',
+  key: 'r32' | 'r16' | 'qf' | 'sf' | 'final',
   team: TeamCode,
   reachedRound: RoundKey,
   state: TournamentState,
@@ -161,14 +163,17 @@ export function scorePlayer(
 ): PlayerScore {
   const awards: MilestoneAward[] = [];
 
+  for (const team of player.picks.r32) {
+    awards.push(evalReachMilestone('r32', team, 'r16', state));
+  }
   for (const team of player.picks.r16) {
-    awards.push(evalReachMilestone('r16', team, 'r16', state));
+    awards.push(evalReachMilestone('r16', team, 'qf', state));
   }
   for (const team of player.picks.qf) {
-    awards.push(evalReachMilestone('qf', team, 'qf', state));
+    awards.push(evalReachMilestone('qf', team, 'sf', state));
   }
   for (const team of player.picks.sf) {
-    awards.push(evalReachMilestone('sf', team, 'sf', state));
+    awards.push(evalReachMilestone('sf', team, 'final', state));
   }
   awards.push(
     evalReachMilestone('final', player.picks.final, 'final', state),

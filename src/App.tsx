@@ -4,6 +4,8 @@ import { TabsNav } from './components/TabsNav';
 import { ClasificacionPage } from './pages/Clasificacion';
 import { BracketPage } from './pages/Bracket';
 import { PrediccionPage } from './pages/Prediccion';
+import { CuadrosPage } from './pages/Cuadros';
+import { CuadroDetailPage } from './pages/CuadroDetail';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
@@ -54,6 +56,11 @@ function App() {
                 <Route path="/" element={<ClasificacionPage />} />
                 <Route path="/bracket" element={<BracketPage />} />
                 <Route path="/prediccion" element={<PrediccionPage />} />
+                <Route path="/cuadros" element={<CuadrosPage />} />
+                <Route
+                  path="/cuadros/:name"
+                  element={<CuadroDetailPage />}
+                />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </ErrorBoundary>

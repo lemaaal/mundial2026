@@ -88,13 +88,25 @@ function PodiumSpot({
 }
 
 export function PodiumDisplay({ scores, onSelect }: PodiumDisplayProps) {
-  const first = scores.find((s) => s.rank === 1);
-  const second = scores.find((s) => s.rank === 2 && s !== first);
-  const third = scores.find(
-    (s) => s.rank === 3 && s !== first && s !== second,
-  );
+  // Siempre rellenamos los 3 huecos del podio con los 3 primeros del ranking,
+  // aunque haya empates (varios participantes pueden compartir rank=1).
+  const [first, second, third] = scores;
 
   const tiedFirsts = scores.filter((s) => s.rank === 1);
+  const tiedAtPodium = scores.filter(
+    (s) =>
+      (first && s.confirmedPoints === first.confirmedPoints) ||
+      (second && s.confirmedPoints === second.confirmedPoints) ||
+      (third && s.confirmedPoints === third.confirmedPoints),
+  );
+  const hasPodiumTie =
+    tiedAtPodium.length > 3 ||
+    (first &&
+      second &&
+      first.confirmedPoints === second.confirmedPoints) ||
+    (second &&
+      third &&
+      second.confirmedPoints === third.confirmedPoints);
 
   return (
     <section
@@ -107,11 +119,16 @@ export function PodiumDisplay({ scores, onSelect }: PodiumDisplayProps) {
         <PodiumSpot score={first} spot={1} onSelect={onSelect} />
         <PodiumSpot score={third} spot={3} onSelect={onSelect} />
       </div>
-      {tiedFirsts.length > 1 && (
+      {tiedFirsts.length > 1 ? (
         <p className="text-center text-text-muted text-xs mt-3">
-          Empate en el primer puesto: {tiedFirsts.map((s) => s.player.name).join(', ')}
+          Empate en el primer puesto:{' '}
+          {tiedFirsts.map((s) => s.player.name).join(', ')}
         </p>
-      )}
+      ) : hasPodiumTie ? (
+        <p className="text-center text-text-muted text-xs mt-3">
+          Hay empates en el podio · orden mostrado sin desempate.
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -141,6 +141,7 @@ export function parseTournament(raw: RawWorldCup): TournamentState {
       round: roundKey,
       num: m.num ?? 0,
       date: m.date,
+      time: m.time,
       ground: m.ground,
       team1,
       team2,

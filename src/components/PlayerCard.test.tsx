@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { PlayerCard } from './PlayerCard';
 import type { RankedScore } from '../utils/scoring';
 
@@ -28,24 +29,34 @@ function makeScore(overrides: Partial<RankedScore> = {}): RankedScore {
   };
 }
 
+function renderCard(score: RankedScore) {
+  return render(
+    <MemoryRouter>
+      <PlayerCard score={score} />
+    </MemoryRouter>,
+  );
+}
+
 describe('PlayerCard', () => {
-  it('renders player name, points, and rank badge', () => {
-    render(<PlayerCard score={makeScore()} />);
+  it('renders player name, points, rank badge, and alive-team count summary', () => {
+    renderCard(makeScore());
     expect(screen.getByText('Astu')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('1º')).toBeInTheDocument();
-    expect(screen.getByText('+8 potenciales')).toBeInTheDocument();
+    expect(
+      screen.getByText(/\+8 potenciales · 0 equipos vivos/),
+    ).toBeInTheDocument();
   });
 
   it('uses the rank badge that matches the score rank', () => {
-    render(<PlayerCard score={makeScore({ rank: 4 })} />);
+    renderCard(makeScore({ rank: 4 }));
     expect(screen.getByText('4º')).toBeInTheDocument();
   });
 
-  it('invokes onClick when pressed', () => {
-    const onClick = vi.fn();
-    render(<PlayerCard score={makeScore()} onClick={onClick} />);
+  it('expands to reveal the "Ver cuadro original" link when clicked', () => {
+    renderCard(makeScore());
+    expect(screen.queryByText('Ver cuadro original')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button'));
-    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Ver cuadro original')).toBeInTheDocument();
   });
 });

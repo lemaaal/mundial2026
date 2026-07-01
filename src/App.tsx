@@ -6,6 +6,7 @@ import { BracketPage } from './pages/Bracket';
 import { PrediccionPage } from './pages/Prediccion';
 import { CuadrosPage } from './pages/Cuadros';
 import { CuadroDetailPage } from './pages/CuadroDetail';
+import { PartidosPage } from './pages/Partidos';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
@@ -55,6 +56,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<ClasificacionPage />} />
                 <Route path="/bracket" element={<BracketPage />} />
+                <Route path="/partidos" element={<PartidosPage />} />
                 <Route path="/prediccion" element={<PrediccionPage />} />
                 <Route path="/cuadros" element={<CuadrosPage />} />
                 <Route

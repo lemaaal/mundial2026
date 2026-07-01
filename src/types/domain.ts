@@ -78,6 +78,8 @@ export interface ParsedMatch {
   round: RoundKey;
   num: number;
   date: string;
+  /** Raw time string from openfootball, e.g. "13:00 UTC-6". Optional. */
+  time?: string;
   ground?: string;
   team1: MatchSide;
   team2: MatchSide;

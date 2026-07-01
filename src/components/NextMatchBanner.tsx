@@ -15,7 +15,7 @@ import { ExternalIcon, LiveDotIcon } from './icons';
 import { PotentialPointsRow } from './PotentialPointsRow';
 
 const FLASHSCORE_URL =
-  'https://www.flashscore.es/futbol/mundial/mundial-2026/';
+  'https://www.flashscore.es/futbol/mundial/campeonato-del-mundo/';
 
 interface NextMatchBannerProps {
   state: TournamentState;

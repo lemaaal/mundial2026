@@ -12,7 +12,7 @@ import { ExternalIcon, ChevronDownIcon } from './icons';
 import { PotentialPointsRow } from './PotentialPointsRow';
 
 const FLASHSCORE_URL =
-  'https://www.flashscore.es/futbol/mundial/mundial-2026/';
+  'https://www.flashscore.es/futbol/mundial/campeonato-del-mundo/';
 
 const ROUND_SHORT: Record<ParsedMatch['round'], string> = {
   r32: '16avos',

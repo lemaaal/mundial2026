@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { POINTS, scorePlayer, scoreAllPlayers, rankByConfirmed } from './scoring';
+import {
+  POINTS,
+  scorePlayer,
+  scoreAllPlayers,
+  rankByConfirmed,
+  calcTraditionalScore,
+} from './scoring';
 import { parseTournament } from '../services/worldcupApi';
 import type {
   Player,
@@ -164,6 +170,57 @@ describe('scorePlayer', () => {
     const result = scorePlayer(ASTU, state);
     const championAward = result.awards.find((a) => a.key === 'champion');
     expect(championAward?.status).toBe('lost');
+  });
+});
+
+describe('calcTraditionalScore', () => {
+  it('starts at 0 confirmed when nothing has been played', () => {
+    const state = emptyState();
+    const result = calcTraditionalScore(ASTU, state);
+    expect(result.confirmedPoints).toBe(0);
+    expect(result.potentialPoints).toBeGreaterThan(0);
+  });
+
+  it('awards exactly 1 point per correct pick regardless of round', () => {
+    const state = emptyState();
+    state.reached.r16 = new Set(['FRA', 'GER', 'POR', 'ESP']);
+    state.reached.qf = new Set(['FRA', 'POR', 'ESP']);
+    state.reached.sf = new Set(['FRA', 'ESP']);
+    state.reached.final = new Set(['FRA', 'ESP']);
+    state.champion = 'FRA';
+    state.eliminated = new Set(['GER', 'POR', 'ESP']);
+    state.alive = new Set();
+
+    const result = calcTraditionalScore(ASTU, state);
+
+    // Every confirmed award must be worth exactly 1 point.
+    for (const award of result.awards) {
+      expect(award.points).toBe(1);
+    }
+
+    // Correct picks in this scenario:
+    //  · 16avos: GER, FRA, POR, ESP        → 4
+    //  · Octavos: FRA, ESP                 → 2
+    //  · Cuartos: FRA, ESP                 → 2
+    //  · Semis: FRA                        → 1
+    //  · Campeón: FRA                      → 1
+    // Total confirmed hits = 10, and no team is alive → 0 potential.
+    expect(result.confirmedPoints).toBe(10);
+    expect(result.potentialPoints).toBe(0);
+  });
+
+  it('is selectable through scoreAllPlayers', () => {
+    const state = emptyState();
+    state.reached.r16 = new Set(['GER']);
+    state.eliminated = new Set(['GER']);
+    state.alive.delete('GER');
+
+    const [cumulative] = scoreAllPlayers([ASTU], state, 'cumulative');
+    const [traditional] = scoreAllPlayers([ASTU], state, 'traditional');
+
+    // A single R16 hit is worth 2 cumulatively (1 base + 1 acum) but 1 traditionally.
+    expect(cumulative!.confirmedPoints).toBe(2);
+    expect(traditional!.confirmedPoints).toBe(1);
   });
 });
 

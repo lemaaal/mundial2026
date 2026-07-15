@@ -64,7 +64,7 @@ export const PLAYERS: Player[] = [
       r16: ['FRA', 'NED', 'ESP', 'BEL', 'NOR', 'ENG', 'ARG', 'DZA'],
       qf: ['FRA', 'ESP', 'ENG', 'ARG'],
       sf: ['ESP', 'ARG'],
-      third: 'FRA',
+      third: 'ING',
       final: 'ARG',
       champion: 'ESP',
     },

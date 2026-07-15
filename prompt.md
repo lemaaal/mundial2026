@@ -61,7 +61,7 @@ export const PLAYERS: Player[] = [
   },
   {
     name: "Noya", abbr: "NO", color: "#f59e0b",
-    picks: { r16:["GER","FRA","CAN","NED","POR","ESP","USA","BEL"], qf:["GER","FRA","ESP","BEL"], sf:["FRA","ESP"], third:"ARG", final:"ESP", champion:"ESP" }
+    picks: { r16:["GER","FRA","CAN","NED","POR","ESP","USA","BEL"], qf:["GER","FRA","ESP","BEL"], sf:["ING","ESP"], third:"ARG", final:"ESP", champion:"ESP" }
   },
   {
     name: "Pastrana", abbr: "PA", color: "#ef4444",
@@ -265,3 +265,95 @@ El fichero `src/constants/players.ts` tiene datos mal transcritos en el campo `p
 - No asumas ni reutilices los datos que ya había en el fichero actual — analiza cada imagen desde cero como fuente de verdad, porque varios de los valores actuales están equivocados.
 - Si en alguna imagen hay ambigüedad o no se aprecia bien algún equipo (resolución, texto cortado, etc.), dímelo explícitamente en vez de adivinar.
 - Cuando termines, muéstrame un resumen en una tabla (participante → r16 → qf → sf → third → final → champion) para que pueda verificarlo rápido antes de dar el cambio por bueno.
+
+
+# Nuevas features: próximos partidos, partido en directo y quién votó a cada selección
+
+## Feature 1 — Banner "Próximo partido / En directo" en la página de Clasificación
+
+Encima del ranking en la pestaña de Clasificación, añade un banner persistente que muestre:
+
+### Lógica de estados
+
+El banner tiene 3 estados posibles según el momento:
+
+**A) Partido en directo** (hay un partido de la fase eliminatoria jugándose ahora mismo):
+- Fondo destacado (rojo o verde pulsante), texto "EN DIRECTO"
+- Equipos con banderas y marcador actual si está disponible
+- Minuto del partido si el dato está disponible
+- Botón "Ver en Flashscore →" que abre `https://www.flashscore.es/futbol/mundial/mundial-2026/` en pestaña nueva
+
+**B) Próximo partido** (no hay partido en directo pero hay uno próximo):
+- Equipos con banderas
+- Fecha y hora en hora local del usuario (usa `Intl.DateTimeFormat` con la zona horaria del navegador)
+- Cuenta atrás tipo "en 2h 34min" o "mañana a las 21:00" según la distancia temporal
+- Botón "Ver en Flashscore →" con el mismo enlace
+- Indicador de cuántos puntos potenciales están en juego para cada participante en ese partido concreto (ver Feature 3 para el cálculo)
+
+**C) Sin partidos próximos** (torneo finalizado o pausa larga):
+- Mensaje neutro "No hay partidos programados próximamente"
+
+### Fuente de datos para los partidos
+
+Usa el mismo JSON de openfootball que ya tienes. Los partidos que aún no tienen `score` o tienen `score: null` y tienen campo `date` son los próximos. Ordénalos por fecha ascendente y toma el primero como "próximo partido". Para detectar si hay uno en directo, compara la hora actual con la fecha del partido: si han pasado menos de 120 minutos desde el kickoff y el partido no tiene score completo, considéralo "probablemente en directo" (openfootball no tiene scores en tiempo real, así que es una aproximación razonable; no prometas datos en tiempo real en la UI, usa texto como "posiblemente en curso").
+
+---
+
+## Feature 2 — Pestaña nueva "Partidos"
+
+Añade una cuarta pestaña llamada "Partidos" (entre "Bracket" y la que ya existía de Predicción, o al final — donde encaje mejor visualmente).
+
+### Contenido
+
+Lista todos los partidos de la fase eliminatoria agrupados por ronda, ordenados cronológicamente. Para cada partido muestra:
+
+**Partido jugado:**
+- Bandera + nombre equipo local — marcador — bandera + nombre equipo visitante
+- Si fue a penaltis, muestra el resultado de penaltis en pequeño debajo del marcador (ej. "pen. 3–4")
+- Fecha y hora (formateada en hora local)
+- Chip con la ronda (16avos, Octavos, etc.)
+- Botón secundario "Flashscore →" que enlaza a `https://www.flashscore.es/futbol/mundial/mundial-2026/`
+
+**Partido pendiente:**
+- Banderas y nombres de equipos (o "Ganador partido #X" si aún no se conocen)
+- Fecha y hora en hora local con cuenta atrás
+- Indicador de puntos potenciales en juego (ver Feature 3)
+- Botón "Flashscore →"
+
+### Puntos potenciales en juego por partido
+
+Para cada partido pendiente, muestra un mini-ranking colapsable (toggle con chevron) que indique, de los 8 participantes, cuántos puntos puede ganar cada uno si su equipo predicho gana ese partido. Ordénalo de mayor a menor potencial. Formato compacto: avatar + nombre + "+X pts posibles".
+
+---
+
+## Feature 3 — Quién votó a cada selección (en pestaña Clasificación)
+
+En la pestaña de Clasificación, en cada tarjeta de participante, añade una sección colapsable (expandible con click/tap en la propia tarjeta o en un botón "Ver picks →") que muestre los equipos que ese participante tiene aún vivos en el torneo real, con el potencial de puntos que puede ganar con cada uno.
+
+**Adicionalmente**, añade una vista alternativa "Por selección": un botón toggle en la cabecera de la pestaña Clasificación que cambie entre:
+
+- **Vista ranking** (la actual): tarjetas de participantes ordenadas por puntos
+- **Vista por selección**: lista de todos los equipos aún vivos en el torneo, y al hacer click en cualquier equipo se abre un modal/drawer con:
+  - Bandera grande del equipo + nombre
+  - Lista de participantes que predijeron a ese equipo en alguna ronda, con:
+    - Avatar + nombre del participante
+    - En qué rondas lo tienen predicho (chips: "Octavos", "Semis", "Final", "Campeón")
+    - Cuántos puntos potenciales le quedan por ganar con ese equipo concretamente
+  - Si nadie lo predijo, mensaje "Ningún participante predijo a este equipo tan lejos"
+  - Botón de cerrar el modal
+
+El modal debe cerrarse también al hacer click fuera o con Escape.
+
+---
+
+## Requisitos técnicos generales
+
+- Toda la lógica de "puntos potenciales" debe reutilizar la función de scoring ya existente en `src/utils/scoring.ts`, no duplicar código
+- Las horas siempre en hora local del usuario usando la API nativa `Intl.DateTimeFormat`
+- El enlace a Flashscore siempre abre en `target="_blank" rel="noopener noreferrer"`
+- Los modales/drawers deben ser accesibles: foco atrapado dentro, cerrable con Escape, aria-modal
+- Añade los nuevos componentes en `src/components/`: `NextMatchBanner`, `MatchList`, `MatchCard`, `TeamVotesModal`, `PotentialPointsRow`
+- Actualiza los tipos en `src/types/domain.ts` si necesitas nuevas interfaces (ej. `MatchWithPotential`)
+- Responsive: el banner funciona bien en móvil (una columna si no cabe en horizontal), la lista de partidos es legible en pantalla pequeña, el modal ocupa pantalla completa en móvil
+
+Antes de empezar dime si tienes dudas sobre alguna de las 3 features o sobre cómo encajan con la estructura actual del proyecto.

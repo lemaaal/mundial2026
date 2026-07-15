@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournament } from '../hooks/useTournament';
 import { PLAYERS } from '../constants/players';
-import { rankByConfirmed, scoreAllPlayers } from '../utils/scoring';
+import {
+  rankByConfirmed,
+  scoreAllPlayers,
+  type ScoringSystem,
+} from '../utils/scoring';
 import { PodiumDisplay } from '../components/PodiumDisplay';
 import { PlayerCard } from '../components/PlayerCard';
 import {
@@ -21,13 +25,14 @@ type ViewMode = 'ranking' | 'teams';
 export function ClasificacionPage() {
   const { data, isLoading, error, refetch, isFetching } = useTournament();
   const [view, setView] = useState<ViewMode>('ranking');
+  const [system, setSystem] = useState<ScoringSystem>('cumulative');
   const [selectedTeam, setSelectedTeam] = useState<TeamCode | null>(null);
   const navigate = useNavigate();
   const openCuadro = (name: string) => navigate(`/cuadros/${name.toLowerCase()}`);
 
   const playerScores = useMemo(
-    () => (data ? scoreAllPlayers(PLAYERS, data) : []),
-    [data],
+    () => (data ? scoreAllPlayers(PLAYERS, data, system) : []),
+    [data, system],
   );
   const ranked = useMemo(
     () => rankByConfirmed(playerScores),
@@ -47,9 +52,11 @@ export function ClasificacionPage() {
             Clasificación
           </h1>
           <p className="text-sm text-text-muted">
-            {view === 'ranking'
-              ? 'Puntos confirmados según resultados reales.'
-              : 'Equipos aún vivos y quién los predijo.'}
+            {view === 'teams'
+              ? 'Equipos aún vivos y quién los predijo.'
+              : system === 'traditional'
+                ? '1 punto por cada acierto, sin acumulación.'
+                : 'Puntos confirmados según resultados reales.'}
           </p>
         </div>
         <RefreshButton
@@ -75,37 +82,74 @@ export function ClasificacionPage() {
         <>
           <NextMatchBanner state={data} />
 
-          <div
-            role="tablist"
-            aria-label="Vista"
-            className="inline-flex self-start rounded-lg bg-bg-card border border-border-soft p-1 text-xs sm:text-sm shadow-sm"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === 'ranking'}
-              onClick={() => setView('ranking')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                view === 'ranking'
-                  ? 'bg-primary text-white'
-                  : 'text-text-muted hover:text-text'
-              }`}
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="tablist"
+              aria-label="Vista"
+              className="inline-flex rounded-lg bg-bg-card border border-border-soft p-1 text-xs sm:text-sm shadow-sm"
             >
-              Ranking
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === 'teams'}
-              onClick={() => setView('teams')}
-              className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
-                view === 'teams'
-                  ? 'bg-primary text-white'
-                  : 'text-text-muted hover:text-text'
-              }`}
-            >
-              Por selección
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'ranking'}
+                onClick={() => setView('ranking')}
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                  view === 'ranking'
+                    ? 'bg-primary text-white'
+                    : 'text-text-muted hover:text-text'
+                }`}
+              >
+                Ranking
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === 'teams'}
+                onClick={() => setView('teams')}
+                className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                  view === 'teams'
+                    ? 'bg-primary text-white'
+                    : 'text-text-muted hover:text-text'
+                }`}
+              >
+                Por selección
+              </button>
+            </div>
+
+            {view === 'ranking' && (
+              <div
+                role="radiogroup"
+                aria-label="Sistema de puntuación"
+                className="inline-flex rounded-lg bg-bg-card border border-border-soft p-1 text-xs sm:text-sm shadow-sm"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={system === 'cumulative'}
+                  onClick={() => setSystem('cumulative')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                    system === 'cumulative'
+                      ? 'bg-primary text-white'
+                      : 'text-text-muted hover:text-text'
+                  }`}
+                >
+                  Acumulativo
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={system === 'traditional'}
+                  onClick={() => setSystem('traditional')}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                    system === 'traditional'
+                      ? 'bg-primary text-white'
+                      : 'text-text-muted hover:text-text'
+                  }`}
+                >
+                  Tradicional
+                </button>
+              </div>
+            )}
           </div>
 
           {view === 'ranking' ? (

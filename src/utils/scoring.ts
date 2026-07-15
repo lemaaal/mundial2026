@@ -197,11 +197,49 @@ export function scorePlayer(
   };
 }
 
+/** Sistema tradicional: cada acierto vale siempre 1 punto, sin importar la ronda. */
+export const TRADITIONAL_POINTS = 1;
+
+/**
+ * Puntúa a un jugador con el sistema tradicional (1 punto por acierto).
+ *
+ * Reutiliza la evaluación acumulativa de `scorePlayer` para determinar el
+ * estado (confirmed/potential/lost) de cada hito — que es idéntico en ambos
+ * sistemas — y sólo aplana los puntos a 1 por acierto.
+ */
+export function calcTraditionalScore(
+  player: Player,
+  state: TournamentState,
+): PlayerScore {
+  const awards: MilestoneAward[] = scorePlayer(player, state).awards.map(
+    (a) => ({ ...a, points: TRADITIONAL_POINTS }),
+  );
+
+  let confirmedPoints = 0;
+  let potentialPoints = 0;
+  for (const a of awards) {
+    if (a.status === 'confirmed') confirmedPoints += a.points;
+    else if (a.status === 'potential') potentialPoints += a.points;
+  }
+
+  return {
+    player,
+    confirmedPoints,
+    potentialPoints,
+    totalPossiblePoints: confirmedPoints + potentialPoints,
+    awards,
+  };
+}
+
+export type ScoringSystem = 'cumulative' | 'traditional';
+
 export function scoreAllPlayers(
   players: Player[],
   state: TournamentState,
+  system: ScoringSystem = 'cumulative',
 ): PlayerScore[] {
-  return players.map((p) => scorePlayer(p, state));
+  const calc = system === 'traditional' ? calcTraditionalScore : scorePlayer;
+  return players.map((p) => calc(p, state));
 }
 
 export interface RankedScore extends PlayerScore {

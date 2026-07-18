@@ -357,3 +357,41 @@ El modal debe cerrarse también al hacer click fuera o con Escape.
 - Responsive: el banner funciona bien en móvil (una columna si no cabe en horizontal), la lista de partidos es legible en pantalla pequeña, el modal ocupa pantalla completa en móvil
 
 Antes de empezar dime si tienes dudas sobre alguna de las 3 features o sobre cómo encajan con la estructura actual del proyecto.
+
+# Nueva feature: sistema de puntuación tradicional (1 punto por partido acertado)
+
+Quiero añadir un segundo sistema de puntuación alternativo al acumulativo que ya existe, para poder comparar ambos.
+
+## El sistema
+
+**1 punto por cada equipo acertado en cualquier ronda**, sin acumulación ni bonus. Es decir:
+- Si predijiste que un equipo pasaría de 16avos y efectivamente pasó → 1 punto
+- Si predijiste que un equipo llegaría a cuartos y llegó → 1 punto
+- Si acertaste el campeón → 1 punto
+- El 3er puesto exacto → 1 punto
+
+Sin importar la ronda, cada acierto vale siempre 1 punto fijo.
+
+## Dónde mostrarlo
+
+En la pestaña de **Clasificación**, añade un toggle o selector en la cabecera (junto al toggle "Vista ranking / Vista por selección" que ya existe) para cambiar entre:
+
+- **Sistema acumulativo** (el actual, que ya funciona)
+- **Sistema tradicional** (1 pt por acierto)
+
+Cuando el usuario cambia el sistema, el ranking se recalcula y reordena en tiempo real. El sistema seleccionado se mantiene en el estado local del componente (no hace falta persistirlo en localStorage).
+
+## Implementación
+
+- Añade una función `calcTraditionalScore(player: Player, results: TournamentResults): ScoreResult` en `src/utils/scoring.ts`, siguiendo el mismo patrón que la función acumulativa ya existente
+- Reutiliza los mismos tipos `ScoreResult` y `TournamentResults` que ya hay — si necesitas ajustarlos para que sean compatibles con ambos sistemas, hazlo
+- El desglose por ronda en cada tarjeta de participante también debe actualizarse según el sistema activo (en tradicional, cada celda muestra cuántos aciertos tuvo en esa ronda, en vez de puntos acumulados)
+- Añade un test en Vitest para `calcTraditionalScore` con un caso conocido
+
+## UI del toggle
+
+Algo simple y claro, tipo:
+```
+[ Acumulativo ]  [ Tradicional ]
+```
+Dos botones pill o un segmented control, el activo resaltado. Que quede claro cuál está seleccionado en todo momento. Mantenlo dentro del estilo visual actual de la app.
